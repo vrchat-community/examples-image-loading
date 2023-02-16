@@ -1,15 +1,15 @@
 ﻿using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using VRC.SDK3.Image;
 using VRC.SDK3.StringLoading;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
-public class FrameDataLoader : UdonSharpBehaviour
+public class SlideshowFrame : UdonSharpBehaviour
 {
-   
-    public VRCUrl[] rgbUrl;
+    public VRCUrl[] imageUrls;
     public VRCUrl stringUrl;
     public new Renderer renderer;
     public Text field;
@@ -20,7 +20,6 @@ public class FrameDataLoader : UdonSharpBehaviour
     private VRCImageDownloader _imageDownloader;
     private IUdonEventReceiver udonEventReceiver;
     private string[] _captions = new string[0];
-    private bool[] _downloadsComplete;
     private Texture2D[] _textures;
     
     void Start()
@@ -29,8 +28,8 @@ public class FrameDataLoader : UdonSharpBehaviour
         udonEventReceiver = (IUdonEventReceiver)this;
         
         // Track which downloads have been completed already
-        _downloadsComplete = new bool[rgbUrl.Length];
-        _textures = new Texture2D[rgbUrl.Length];
+        // _downloadsComplete = new bool[rgbUrl.Length];
+        _textures = new Texture2D[imageUrls.Length];
         
         // Construct Image Downloader to reuse
         _imageDownloader = new VRCImageDownloader();
@@ -49,17 +48,19 @@ public class FrameDataLoader : UdonSharpBehaviour
     
     private void LoadNext()
     {
-        _loadedIndex = (int)(Networking.GetServerTimeInMilliseconds() / 1000f / slideDurationSeconds) % rgbUrl.Length;
+        _loadedIndex = (int)(Networking.GetServerTimeInMilliseconds() / 1000f / slideDurationSeconds) % imageUrls.Length;
 
-        if (_downloadsComplete[_loadedIndex])
+        var nextTexture = _textures[_loadedIndex];
+        
+        if (nextTexture != null)
         {
-            renderer.sharedMaterial.mainTexture = _textures[_loadedIndex];
+            renderer.sharedMaterial.mainTexture = nextTexture;
         }
         else
         {
             var rgbInfo = new TextureInfo();
             rgbInfo.GenerateMipMaps = true;
-            _imageDownloader.DownloadImage(rgbUrl[_loadedIndex], renderer.material, udonEventReceiver, rgbInfo);
+            _imageDownloader.DownloadImage(imageUrls[_loadedIndex], renderer.material, udonEventReceiver, rgbInfo);
         }
 
         // Set caption if one is provided
@@ -87,14 +88,12 @@ public class FrameDataLoader : UdonSharpBehaviour
     {
         Debug.Log($"Image loaded: {result.SizeInMemoryBytes} bytes.");
         
-        _downloadsComplete[_loadedIndex] = true;
         _textures[_loadedIndex] = result.Result;
     }
 
     public override void OnImageLoadError(IVRCImageDownload result)
     {
         Debug.Log($"Image not loaded: {result.Error.ToString()}: {result.ErrorMessage}.");
-        _downloadsComplete[_loadedIndex] = false;
     }
 
     private void OnDestroy()
