@@ -4,22 +4,26 @@ using UnityEngine.UI;
 using VRC.SDK3.Image;
 using VRC.SDK3.StringLoading;
 using VRC.SDKBase;
-using VRC.Udon;
+using VRC.Udon.Common.Interfaces;
 
 public class FrameDataLoader : UdonSharpBehaviour
 {
     private VRCImageDownloader _imageDownloader;
-    public UdonBehaviour udonEventReceiver;
+    private IUdonEventReceiver udonEventReceiver;
     public VRCUrl[] rgbUrl;
-    public VRCUrl[] stringUrl;
+    public VRCUrl stringUrl;
     public Renderer renderer;
     public Text field;
     public float photoDurationSeconds = 10f; 
     private int _loadedIndex = -1;
+
+    public string[] captions = new string[0];
     
     void Start()
     {
+        udonEventReceiver = (IUdonEventReceiver)this;
         _imageDownloader = new VRCImageDownloader();
+        VRCStringDownloader.LoadUrl(stringUrl, udonEventReceiver);
         LoadNextRecursive();
     }
 
@@ -31,23 +35,28 @@ public class FrameDataLoader : UdonSharpBehaviour
     
     private void LoadNext()
     {
-        // _loadedIndex++;
-        // if(_loadedIndex >= rgbUrl.Length)
-        // {
-        //     _loadedIndex = 0;
-        // }
         _loadedIndex = (int)(Networking.GetServerTimeInMilliseconds() / 1000f / photoDurationSeconds) % rgbUrl.Length;
         
         var rgbInfo = new TextureInfo();
         rgbInfo.WrapModeU = TextureWrapMode.Mirror;
         rgbInfo.WrapModeV = TextureWrapMode.Mirror;
         _imageDownloader.DownloadImage(rgbUrl[_loadedIndex], renderer.material, udonEventReceiver, rgbInfo);
-        VRCStringDownloader.LoadUrl(stringUrl[_loadedIndex], udonEventReceiver);
+
+        // Set caption if one is provided
+        if (_loadedIndex < captions.Length)
+        {
+            field.text = captions[_loadedIndex];
+        }
+        else
+        {
+            field.text = "";
+        }
     }
 
     public override void OnStringLoadSuccess(IVRCStringDownload result)
     {
-        field.text = result.Result;
+        Debug.Log($"Loaded String, making Captions from {result.Result}");
+        captions = result.Result.Split('\n');
     }
 
     public override void OnStringLoadError(IVRCStringDownload result)
