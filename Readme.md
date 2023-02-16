@@ -1,4 +1,4 @@
-﻿# VRChat Image Downloding Examples
+﻿# VRChat Image Downloading Examples
 
 This is a WIP Unity Example Project that demonstrates some ways that remote images can be downloaded using Udon in VRChat Worlds.
 
