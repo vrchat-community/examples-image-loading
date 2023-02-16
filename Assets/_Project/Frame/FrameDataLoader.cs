@@ -8,22 +8,36 @@ using VRC.Udon.Common.Interfaces;
 
 public class FrameDataLoader : UdonSharpBehaviour
 {
-    private VRCImageDownloader _imageDownloader;
-    private IUdonEventReceiver udonEventReceiver;
+   
     public VRCUrl[] rgbUrl;
     public VRCUrl stringUrl;
-    public Renderer renderer;
+    public new Renderer renderer;
     public Text field;
-    public float photoDurationSeconds = 10f; 
+    public float photoDurationSeconds = 10f;
+    
+    // Private Variables
     private int _loadedIndex = -1;
-
-    public string[] captions = new string[0];
+    private VRCImageDownloader _imageDownloader;
+    private IUdonEventReceiver udonEventReceiver;
+    private string[] captions = new string[0];
+    private bool[] downloadsComplete;
+    private Texture2D[] _textures;
     
     void Start()
     {
+        // Cast self to the type needed for Image and String Loading methods
         udonEventReceiver = (IUdonEventReceiver)this;
+        
+        // Track which downloads have been completed already
+        downloadsComplete = new bool[rgbUrl.Length];
+        _textures = new Texture2D[rgbUrl.Length];
+        
+        // Construct Image Downloader to reuse
         _imageDownloader = new VRCImageDownloader();
+        
+        // Load Captions
         VRCStringDownloader.LoadUrl(stringUrl, udonEventReceiver);
+        
         LoadNextRecursive();
     }
 
@@ -36,11 +50,18 @@ public class FrameDataLoader : UdonSharpBehaviour
     private void LoadNext()
     {
         _loadedIndex = (int)(Networking.GetServerTimeInMilliseconds() / 1000f / photoDurationSeconds) % rgbUrl.Length;
-        
-        var rgbInfo = new TextureInfo();
-        rgbInfo.WrapModeU = TextureWrapMode.Mirror;
-        rgbInfo.WrapModeV = TextureWrapMode.Mirror;
-        _imageDownloader.DownloadImage(rgbUrl[_loadedIndex], renderer.material, udonEventReceiver, rgbInfo);
+
+        if (downloadsComplete[_loadedIndex])
+        {
+            renderer.sharedMaterial.mainTexture = _textures[_loadedIndex];
+        }
+        else
+        {
+            var rgbInfo = new TextureInfo();
+            rgbInfo.WrapModeU = TextureWrapMode.Mirror;
+            rgbInfo.WrapModeV = TextureWrapMode.Mirror;
+            _imageDownloader.DownloadImage(rgbUrl[_loadedIndex], renderer.material, udonEventReceiver, rgbInfo);
+        }
 
         // Set caption if one is provided
         if (_loadedIndex < captions.Length)
@@ -55,7 +76,6 @@ public class FrameDataLoader : UdonSharpBehaviour
 
     public override void OnStringLoadSuccess(IVRCStringDownload result)
     {
-        Debug.Log($"Loaded String, making Captions from {result.Result}");
         captions = result.Result.Split('\n');
     }
 
@@ -67,11 +87,15 @@ public class FrameDataLoader : UdonSharpBehaviour
     public override void OnImageLoadSuccess(IVRCImageDownload result)
     {
         Debug.Log($"Image loaded: {result.SizeInMemoryBytes} bytes.");
+        
+        downloadsComplete[_loadedIndex] = true;
+        _textures[_loadedIndex] = result.Result;
     }
 
     public override void OnImageLoadError(IVRCImageDownload result)
     {
         Debug.Log($"Image not loaded: {result.Error.ToString()}: {result.ErrorMessage}.");
+        downloadsComplete[_loadedIndex] = false;
     }
 
     private void OnDestroy()
