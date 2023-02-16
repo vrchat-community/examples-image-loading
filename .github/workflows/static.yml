@@ -1,5 +1,5 @@
 # Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Publish Web Folder
 
 on:
   # Runs on pushes targeting the default branch
@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          lfs: true
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
