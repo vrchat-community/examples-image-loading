@@ -1,6 +1,6 @@
 ﻿# VRChat Image Downloading Examples
 
-This is a WIP Unity Example Project that demonstrates some ways that remote images can be downloaded using Udon in VRChat Worlds.
+This is a Unity Example Project that demonstrates some ways that remote images can be downloaded using Udon in VRChat Worlds.
 
 ## Getting Started
 
@@ -49,7 +49,6 @@ The basic logic flow of the script is this:
 ## Known Issues
 
 * The first image doesn't have its caption loaded quickly enough, so it doesn't show until the first loop around.
-* The way I'm doing pseudo-sync could use some review. I _think_ it makes sense but I haven't tested it much.
 
 ## Using GitHub to Host the Images and Captions
 
